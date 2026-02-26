@@ -1,0 +1,283 @@
+-- Auto Quest Submit | Mobile UI + Toggle + Draggable + Instant Detection + Multi-Location
+-- LocalScript (run via executor)
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+local TurnInQuest = ReplicatedStorage
+    :WaitForChild("RemoteServices")
+    :WaitForChild("QuestsV2Service")
+    :WaitForChild("RF")
+    :WaitForChild("TurnInQuest")
+
+-- ============================================
+-- CONFIG
+local LOCATIONS = {"Subway", "SpiderCave", "Jungle", "Caves", "Desert", "SnowForest"}
+local BATCH_SIZE = 100
+-- ============================================
+
+local running = false
+local selectedLocation = LOCATIONS[1] -- Default: Subway
+
+-- ============================================
+-- UI SETUP
+-- ============================================
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "AutoQuestUI"
+screenGui.ResetOnSpawn = false
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+screenGui.Parent = playerGui
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 240, 0, 310)
+frame.Position = UDim2.new(1, -250, 1, -320)
+frame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+frame.BorderSizePixel = 0
+frame.Active = true
+frame.Parent = screenGui
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 12)
+corner.Parent = frame
+
+local stroke = Instance.new("UIStroke")
+stroke.Color = Color3.fromRGB(0, 255, 100)
+stroke.Thickness = 1.5
+stroke.Parent = frame
+
+-- Title
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 35)
+title.Position = UDim2.new(0, 0, 0, 0)
+title.BackgroundColor3 = Color3.fromRGB(0, 200, 80)
+title.BorderSizePixel = 0
+title.Text = "⚡ Auto Quest Submit"
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.TextScaled = true
+title.Font = Enum.Font.GothamBold
+title.Parent = frame
+
+local titleCorner = Instance.new("UICorner")
+titleCorner.CornerRadius = UDim.new(0, 12)
+titleCorner.Parent = title
+
+-- Status Label
+local statusLabel = Instance.new("TextLabel")
+statusLabel.Size = UDim2.new(1, 0, 0, 22)
+statusLabel.Position = UDim2.new(0, 0, 0, 40)
+statusLabel.BackgroundTransparency = 1
+statusLabel.Text = "Status: 🔴 OFF"
+statusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+statusLabel.TextScaled = true
+statusLabel.Font = Enum.Font.Gotham
+statusLabel.Parent = frame
+
+-- ID Label
+local idLabel = Instance.new("TextLabel")
+idLabel.Size = UDim2.new(1, 0, 0, 20)
+idLabel.Position = UDim2.new(0, 0, 0, 63)
+idLabel.BackgroundTransparency = 1
+idLabel.Text = "Scanning: --"
+idLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+idLabel.TextScaled = true
+idLabel.Font = Enum.Font.Gotham
+idLabel.Parent = frame
+
+-- Result Label
+local resultLabel = Instance.new("TextLabel")
+resultLabel.Size = UDim2.new(1, 0, 0, 20)
+resultLabel.Position = UDim2.new(0, 0, 0, 84)
+resultLabel.BackgroundTransparency = 1
+resultLabel.Text = "Last Hit: --"
+resultLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
+resultLabel.TextScaled = true
+resultLabel.Font = Enum.Font.GothamBold
+resultLabel.Parent = frame
+
+-- Location Label
+local locationLabel = Instance.new("TextLabel")
+locationLabel.Size = UDim2.new(1, 0, 0, 20)
+locationLabel.Position = UDim2.new(0, 0, 0, 108)
+locationLabel.BackgroundTransparency = 1
+locationLabel.Text = "📍 Location: Subway"
+locationLabel.TextColor3 = Color3.fromRGB(255, 220, 50)
+locationLabel.TextScaled = true
+locationLabel.Font = Enum.Font.GothamBold
+locationLabel.Parent = frame
+
+-- Divider
+local divider = Instance.new("Frame")
+divider.Size = UDim2.new(0.9, 0, 0, 1)
+divider.Position = UDim2.new(0.05, 0, 0, 132)
+divider.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+divider.BorderSizePixel = 0
+divider.Parent = frame
+
+-- Location Buttons
+local locationButtons = {}
+local btnYStart = 138
+local btnHeight = 22
+local btnSpacing = 4
+
+for i, loc in ipairs(LOCATIONS) do
+    local locBtn = Instance.new("TextButton")
+    locBtn.Size = UDim2.new(0.88, 0, 0, btnHeight)
+    locBtn.Position = UDim2.new(0.06, 0, 0, btnYStart + (i - 1) * (btnHeight + btnSpacing))
+    locBtn.BackgroundColor3 = loc == selectedLocation
+        and Color3.fromRGB(0, 180, 70)
+        or Color3.fromRGB(35, 35, 35)
+    locBtn.Text = loc
+    locBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    locBtn.TextScaled = true
+    locBtn.Font = Enum.Font.Gotham
+    locBtn.BorderSizePixel = 0
+    locBtn.Parent = frame
+
+    local lc = Instance.new("UICorner")
+    lc.CornerRadius = UDim.new(0, 6)
+    lc.Parent = locBtn
+
+    locationButtons[loc] = locBtn
+
+    locBtn.MouseButton1Click:Connect(function()
+        -- Deselect all
+        for _, btn in pairs(locationButtons) do
+            btn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+        end
+        -- Select this one
+        locBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 70)
+        selectedLocation = loc
+        locationLabel.Text = "📍 Location: " .. loc
+        print("📍 Location switched to: " .. loc)
+    end)
+end
+
+-- Toggle Button
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Size = UDim2.new(0.88, 0, 0, 35)
+toggleBtn.Position = UDim2.new(0.06, 0, 0, btnYStart + #LOCATIONS * (btnHeight + btnSpacing) + 6)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 80)
+toggleBtn.Text = "▶  START"
+toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleBtn.TextScaled = true
+toggleBtn.Font = Enum.Font.GothamBold
+toggleBtn.BorderSizePixel = 0
+toggleBtn.Parent = frame
+
+local btnCorner = Instance.new("UICorner")
+btnCorner.CornerRadius = UDim.new(0, 8)
+btnCorner.Parent = toggleBtn
+
+-- ============================================
+-- DRAG LOGIC
+-- ============================================
+
+local dragging = false
+local dragInput, dragStart, startPos
+
+local function updateDrag(input)
+    local delta = input.Position - dragStart
+    frame.Position = UDim2.new(
+        startPos.X.Scale,
+        startPos.X.Offset + delta.X,
+        startPos.Y.Scale,
+        startPos.Y.Offset + delta.Y
+    )
+end
+
+title.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or
+       input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = frame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+title.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or
+       input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and input == dragInput then
+        updateDrag(input)
+    end
+end)
+
+-- ============================================
+-- INSTANT SCAN LOGIC
+-- ============================================
+
+local function scanAllIDs()
+    for batchStart = 1, 10000, BATCH_SIZE do
+        if not running then break end
+
+        local batchEnd = math.min(batchStart + BATCH_SIZE - 1, 10000)
+        idLabel.Text = "Scanning: " .. batchStart .. "-" .. batchEnd
+
+        for id = batchStart, batchEnd do
+            task.spawn(function()
+                local ok, result = pcall(function()
+                    return TurnInQuest:InvokeServer(selectedLocation, tostring(id))
+                end)
+
+                if ok and result then
+                    print("✅ Quest turned in! Location: " .. selectedLocation .. " | ID: " .. id)
+                    resultLabel.Text = "Last Hit: ID " .. id
+                    statusLabel.Text = "✅ Submitted!"
+                    statusLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
+                end
+            end)
+        end
+
+        task.wait(0.1)
+    end
+end
+
+-- ============================================
+-- TOGGLE LOGIC
+-- ============================================
+
+local function updateUI()
+    if running then
+        toggleBtn.Text = "⏹  STOP"
+        toggleBtn.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
+        statusLabel.Text = "Status: 🟢 Scanning..."
+        statusLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
+    else
+        toggleBtn.Text = "▶  START"
+        toggleBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 80)
+        statusLabel.Text = "Status: 🔴 OFF"
+        statusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+        idLabel.Text = "Scanning: --"
+    end
+end
+
+toggleBtn.MouseButton1Click:Connect(function()
+    running = not running
+    updateUI()
+
+    if running then
+        task.spawn(function()
+            while running do
+                scanAllIDs()
+                task.wait(0.1)
+            end
+        end)
+    end
+end)
+
+print("✅ Auto Quest UI Loaded!")
