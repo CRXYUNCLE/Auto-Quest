@@ -6,6 +6,8 @@ local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 local VirtualUser = game:GetService("VirtualUser")
+local VIM = game:GetService("VirtualInputManager")
+local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -15,11 +17,11 @@ local playerGui = player:WaitForChild("PlayerGui")
 -- ╚══════════════════════════════╝
 local locations = {
 	{ name = "Soul City",  color = Color3.fromRGB(99, 179, 255),  position = Vector3.new(-1343, 1604, 1595), portal = "SoulSociety" },
-	{ name = "Judgement", color = Color3.fromRGB(255, 120, 120), position = Vector3.new(-1404, 22, -1358), portal = "Judgement" },
+	{ name = "Judgement",  color = Color3.fromRGB(255, 120, 120), position = Vector3.new(-1404, 22, -1358),  portal = "Judgement"   },
 }
 
 -- ╔══════════════════════════════╗
---          UI CONSTRUCTION
+--           SCREEN GUI
 -- ╚══════════════════════════════╝
 
 local screenGui = Instance.new("ScreenGui")
@@ -28,7 +30,10 @@ screenGui.ResetOnSpawn = false
 screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 screenGui.Parent = playerGui
 
--- Toggle Button
+-- ╔══════════════════════════════╗
+--          TOGGLE BUTTON
+-- ╚══════════════════════════════╝
+
 local toggleBtn = Instance.new("TextButton")
 toggleBtn.Size = UDim2.new(0, 48, 0, 48)
 toggleBtn.Position = UDim2.new(0, 16, 0.5, -24)
@@ -49,51 +54,144 @@ toggleStroke.Color = Color3.fromRGB(80, 120, 255)
 toggleStroke.Thickness = 1.5
 toggleStroke.Parent = toggleBtn
 
--- Main Panel
-local panelHeight = 56 + (#locations * 54) + 230
+-- ╔══════════════════════════════╗
+--    TP PANEL (Tab 1)
+-- ╚══════════════════════════════╝
 
-local panel = Instance.new("Frame")
-panel.Name = "Panel"
-panel.Size = UDim2.new(0, 220, 0, panelHeight)
-panel.Position = UDim2.new(0, 72, 0.5, -(panelHeight / 2))
-panel.BackgroundColor3 = Color3.fromRGB(14, 14, 22)
-panel.BorderSizePixel = 0
-panel.ClipsDescendants = true
-panel.Visible = false
-panel.Parent = screenGui
+local tpPanelHeight = 56 + (#locations * 54) + 230
+local skillsPanelHeight = 56 + (5 * 54) + 10 -- 5 skill toggles
 
-local panelCorner = Instance.new("UICorner")
-panelCorner.CornerRadius = UDim.new(0, 14)
-panelCorner.Parent = panel
+local panelW = 220
 
-local panelStroke = Instance.new("UIStroke")
-panelStroke.Color = Color3.fromRGB(60, 80, 200)
-panelStroke.Thickness = 1.5
-panelStroke.Parent = panel
+-- TP Panel
+local tpPanel = Instance.new("Frame")
+tpPanel.Name = "TPPanel"
+tpPanel.Size = UDim2.new(0, panelW, 0, tpPanelHeight)
+tpPanel.Position = UDim2.new(0, 72, 0.5, -(tpPanelHeight / 2))
+tpPanel.BackgroundColor3 = Color3.fromRGB(14, 14, 22)
+tpPanel.BorderSizePixel = 0
+tpPanel.ClipsDescendants = true
+tpPanel.Visible = false
+tpPanel.Parent = screenGui
 
--- Header
-local header = Instance.new("TextLabel")
-header.Size = UDim2.new(1, 0, 0, 42)
-header.Position = UDim2.new(0, 0, 0, 0)
-header.BackgroundTransparency = 1
-header.Text = "TELEPORT"
-header.TextColor3 = Color3.fromRGB(180, 200, 255)
-header.TextSize = 13
-header.Font = Enum.Font.GothamBold
-header.Parent = panel
+local tpPanelCorner = Instance.new("UICorner")
+tpPanelCorner.CornerRadius = UDim.new(0, 14)
+tpPanelCorner.Parent = tpPanel
 
--- Divider
-local divider = Instance.new("Frame")
-divider.Size = UDim2.new(1, -24, 0, 1)
-divider.Position = UDim2.new(0, 12, 0, 42)
-divider.BackgroundColor3 = Color3.fromRGB(60, 80, 200)
-divider.BorderSizePixel = 0
-divider.BackgroundTransparency = 0.6
-divider.Parent = panel
+local tpPanelStroke = Instance.new("UIStroke")
+tpPanelStroke.Color = Color3.fromRGB(60, 80, 200)
+tpPanelStroke.Thickness = 1.5
+tpPanelStroke.Parent = tpPanel
 
--- Status label
+-- Skills Panel
+local skillsPanel = Instance.new("Frame")
+skillsPanel.Name = "SkillsPanel"
+skillsPanel.Size = UDim2.new(0, panelW, 0, skillsPanelHeight)
+skillsPanel.Position = UDim2.new(0, 72, 0.5, -(skillsPanelHeight / 2))
+skillsPanel.BackgroundColor3 = Color3.fromRGB(14, 14, 22)
+skillsPanel.BorderSizePixel = 0
+skillsPanel.ClipsDescendants = true
+skillsPanel.Visible = false
+skillsPanel.Parent = screenGui
+
+local skillsPanelCorner = Instance.new("UICorner")
+skillsPanelCorner.CornerRadius = UDim.new(0, 14)
+skillsPanelCorner.Parent = skillsPanel
+
+local skillsPanelStroke = Instance.new("UIStroke")
+skillsPanelStroke.Color = Color3.fromRGB(200, 120, 60)
+skillsPanelStroke.Thickness = 1.5
+skillsPanelStroke.Parent = skillsPanel
+
+-- ╔══════════════════════════════╗
+--         TAB BUTTONS
+-- ╚══════════════════════════════╝
+
+local tabTP = Instance.new("TextButton")
+tabTP.Size = UDim2.new(0.5, -2, 0, 36)
+tabTP.Position = UDim2.new(0, 6, 0, 4)
+tabTP.BackgroundColor3 = Color3.fromRGB(30, 40, 80)
+tabTP.TextColor3 = Color3.fromRGB(180, 200, 255)
+tabTP.Text = "TELEPORT"
+tabTP.TextSize = 11
+tabTP.Font = Enum.Font.GothamBold
+tabTP.BorderSizePixel = 0
+tabTP.AutoButtonColor = false
+tabTP.Parent = tpPanel
+
+local tabTPCorner = Instance.new("UICorner")
+tabTPCorner.CornerRadius = UDim.new(0, 8)
+tabTPCorner.Parent = tabTP
+
+local tabSkillsOnTP = Instance.new("TextButton")
+tabSkillsOnTP.Size = UDim2.new(0.5, -2, 0, 36)
+tabSkillsOnTP.Position = UDim2.new(0.5, -4, 0, 4)
+tabSkillsOnTP.BackgroundColor3 = Color3.fromRGB(22, 22, 30)
+tabSkillsOnTP.TextColor3 = Color3.fromRGB(120, 120, 140)
+tabSkillsOnTP.Text = "SKILLS"
+tabSkillsOnTP.TextSize = 11
+tabSkillsOnTP.Font = Enum.Font.GothamBold
+tabSkillsOnTP.BorderSizePixel = 0
+tabSkillsOnTP.AutoButtonColor = false
+tabSkillsOnTP.Parent = tpPanel
+
+local tabSkillsOnTPCorner = Instance.new("UICorner")
+tabSkillsOnTPCorner.CornerRadius = UDim.new(0, 8)
+tabSkillsOnTPCorner.Parent = tabSkillsOnTP
+
+-- Mirror tabs on Skills panel
+local tabTPOnSkills = Instance.new("TextButton")
+tabTPOnSkills.Size = UDim2.new(0.5, -2, 0, 36)
+tabTPOnSkills.Position = UDim2.new(0, 6, 0, 4)
+tabTPOnSkills.BackgroundColor3 = Color3.fromRGB(22, 22, 30)
+tabTPOnSkills.TextColor3 = Color3.fromRGB(120, 120, 140)
+tabTPOnSkills.Text = "TELEPORT"
+tabTPOnSkills.TextSize = 11
+tabTPOnSkills.Font = Enum.Font.GothamBold
+tabTPOnSkills.BorderSizePixel = 0
+tabTPOnSkills.AutoButtonColor = false
+tabTPOnSkills.Parent = skillsPanel
+
+local tabTPOnSkillsCorner = Instance.new("UICorner")
+tabTPOnSkillsCorner.CornerRadius = UDim.new(0, 8)
+tabTPOnSkillsCorner.Parent = tabTPOnSkills
+
+local tabSkills = Instance.new("TextButton")
+tabSkills.Size = UDim2.new(0.5, -2, 0, 36)
+tabSkills.Position = UDim2.new(0.5, -4, 0, 4)
+tabSkills.BackgroundColor3 = Color3.fromRGB(50, 30, 15)
+tabSkills.TextColor3 = Color3.fromRGB(255, 160, 80)
+tabSkills.Text = "SKILLS"
+tabSkills.TextSize = 11
+tabSkills.Font = Enum.Font.GothamBold
+tabSkills.BorderSizePixel = 0
+tabSkills.AutoButtonColor = false
+tabSkills.Parent = skillsPanel
+
+local tabSkillsCorner = Instance.new("UICorner")
+tabSkillsCorner.CornerRadius = UDim.new(0, 8)
+tabSkillsCorner.Parent = tabSkills
+
+-- Divider on TP panel
+local tpDivider = Instance.new("Frame")
+tpDivider.Size = UDim2.new(1, -24, 0, 1)
+tpDivider.Position = UDim2.new(0, 12, 0, 44)
+tpDivider.BackgroundColor3 = Color3.fromRGB(60, 80, 200)
+tpDivider.BorderSizePixel = 0
+tpDivider.BackgroundTransparency = 0.6
+tpDivider.Parent = tpPanel
+
+-- Divider on Skills panel
+local skillsDivider = Instance.new("Frame")
+skillsDivider.Size = UDim2.new(1, -24, 0, 1)
+skillsDivider.Position = UDim2.new(0, 12, 0, 44)
+skillsDivider.BackgroundColor3 = Color3.fromRGB(200, 120, 60)
+skillsDivider.BorderSizePixel = 0
+skillsDivider.BackgroundTransparency = 0.6
+skillsDivider.Parent = skillsPanel
+
+-- Status label (TP panel)
 local statusLabel = Instance.new("TextLabel")
-statusLabel.Name = "Status"
 statusLabel.Size = UDim2.new(1, -20, 0, 24)
 statusLabel.Position = UDim2.new(0, 10, 1, -28)
 statusLabel.BackgroundTransparency = 1
@@ -102,7 +200,7 @@ statusLabel.TextColor3 = Color3.fromRGB(120, 220, 140)
 statusLabel.TextSize = 11
 statusLabel.Font = Enum.Font.Gotham
 statusLabel.TextXAlignment = Enum.TextXAlignment.Center
-statusLabel.Parent = panel
+statusLabel.Parent = tpPanel
 
 -- ╔══════════════════════════════╗
 --           FUNCTIONS
@@ -112,9 +210,7 @@ local function setStatus(msg, color)
 	statusLabel.Text = msg
 	statusLabel.TextColor3 = color or Color3.fromRGB(120, 220, 140)
 	task.delay(2.5, function()
-		if statusLabel.Text == msg then
-			statusLabel.Text = ""
-		end
+		if statusLabel.Text == msg then statusLabel.Text = "" end
 	end)
 end
 
@@ -123,11 +219,10 @@ local function setStatusPermanent(msg, color)
 	statusLabel.TextColor3 = color or Color3.fromRGB(120, 220, 140)
 end
 
-local function pressKey(keyCode)
-	local input = Instance.new("InputObject")
-	input.KeyCode = keyCode
-	input.UserInputType = Enum.UserInputType.Keyboard
-	UserInputService:ProcessEvent(input)
+local function simulateKeyPress(keyCode)
+	VIM:SendKeyEvent(true, keyCode, false, game)
+	task.wait(0.1)
+	VIM:SendKeyEvent(false, keyCode, false, game)
 end
 
 local function doTeleport(loc)
@@ -139,14 +234,12 @@ local function doTeleport(loc)
 	if loc.position then
 		local character = player.Character or player.CharacterAdded:Wait()
 		local rootPart = character:WaitForChild("HumanoidRootPart")
-
 		local startPos = rootPart.Position
 		local elapsed = 0
 		repeat
 			task.wait(0.1)
 			elapsed += 0.1
 		until (rootPart.Position - startPos).Magnitude > 10 or elapsed >= 10
-
 		task.wait(0.5)
 		rootPart.CFrame = CFrame.new(loc.position)
 	end
@@ -163,13 +256,13 @@ local function teleportTo(loc)
 end
 
 -- ╔══════════════════════════════╗
---       BUILD LOCATION BUTTONS
+--       LOCATION BUTTONS (TP)
 -- ╚══════════════════════════════╝
 
 for i, loc in ipairs(locations) do
 	local btn = Instance.new("TextButton")
 	btn.Size = UDim2.new(1, -20, 0, 42)
-	btn.Position = UDim2.new(0, 10, 0, 48 + ((i - 1) * 50))
+	btn.Position = UDim2.new(0, 10, 0, 50 + ((i - 1) * 50))
 	btn.BackgroundColor3 = Color3.fromRGB(22, 24, 40)
 	btn.TextColor3 = Color3.fromRGB(220, 230, 255)
 	btn.Text = loc.name
@@ -177,44 +270,27 @@ for i, loc in ipairs(locations) do
 	btn.Font = Enum.Font.GothamSemibold
 	btn.BorderSizePixel = 0
 	btn.AutoButtonColor = false
-	btn.Parent = panel
+	btn.Parent = tpPanel
 
-	local btnCorner = Instance.new("UICorner")
-	btnCorner.CornerRadius = UDim.new(0, 9)
-	btnCorner.Parent = btn
-
-	local btnStroke = Instance.new("UIStroke")
-	btnStroke.Color = loc.color
-	btnStroke.Thickness = 1
-	btnStroke.Transparency = 0.6
-	btnStroke.Parent = btn
-
-	local accent = Instance.new("Frame")
-	accent.Size = UDim2.new(0, 3, 0.6, 0)
-	accent.Position = UDim2.new(0, 0, 0.2, 0)
-	accent.BackgroundColor3 = loc.color
-	accent.BorderSizePixel = 0
-	accent.Parent = btn
-
-	local accentCorner = Instance.new("UICorner")
-	accentCorner.CornerRadius = UDim.new(1, 0)
-	accentCorner.Parent = accent
+	local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0,9); c.Parent = btn
+	local s = Instance.new("UIStroke"); s.Color = loc.color; s.Thickness = 1; s.Transparency = 0.6; s.Parent = btn
+	local a = Instance.new("Frame"); a.Size = UDim2.new(0,3,0.6,0); a.Position = UDim2.new(0,0,0.2,0)
+	a.BackgroundColor3 = loc.color; a.BorderSizePixel = 0; a.Parent = btn
+	local ac = Instance.new("UICorner"); ac.CornerRadius = UDim.new(1,0); ac.Parent = a
 
 	btn.MouseEnter:Connect(function()
-		TweenService:Create(btn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(30, 34, 60) }):Play()
-		TweenService:Create(btnStroke, TweenInfo.new(0.15), { Transparency = 0 }):Play()
+		TweenService:Create(btn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(30,34,60) }):Play()
+		TweenService:Create(s, TweenInfo.new(0.15), { Transparency = 0 }):Play()
 	end)
-
 	btn.MouseLeave:Connect(function()
-		TweenService:Create(btn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(22, 24, 40) }):Play()
-		TweenService:Create(btnStroke, TweenInfo.new(0.15), { Transparency = 0.6 }):Play()
+		TweenService:Create(btn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(22,24,40) }):Play()
+		TweenService:Create(s, TweenInfo.new(0.15), { Transparency = 0.6 }):Play()
 	end)
-
 	btn.MouseButton1Click:Connect(function()
 		teleportTo(loc)
 		TweenService:Create(btn, TweenInfo.new(0.08), { BackgroundColor3 = loc.color }):Play()
 		task.delay(0.15, function()
-			TweenService:Create(btn, TweenInfo.new(0.2), { BackgroundColor3 = Color3.fromRGB(22, 24, 40) }):Play()
+			TweenService:Create(btn, TweenInfo.new(0.2), { BackgroundColor3 = Color3.fromRGB(22,24,40) }):Play()
 		end)
 	end)
 end
@@ -223,238 +299,121 @@ end
 --          ANTI-AFK BUTTON
 -- ╚══════════════════════════════╝
 
-local afkDividerY = 48 + (#locations * 50) + 4
+local afkY = 50 + (#locations * 50) + 8
 
-local afkDivider = Instance.new("Frame")
-afkDivider.Size = UDim2.new(1, -24, 0, 1)
-afkDivider.Position = UDim2.new(0, 12, 0, afkDividerY)
-afkDivider.BackgroundColor3 = Color3.fromRGB(60, 80, 200)
-afkDivider.BorderSizePixel = 0
-afkDivider.BackgroundTransparency = 0.6
-afkDivider.Parent = panel
+local afkDiv = Instance.new("Frame")
+afkDiv.Size = UDim2.new(1,-24,0,1); afkDiv.Position = UDim2.new(0,12,0,afkY-6)
+afkDiv.BackgroundColor3 = Color3.fromRGB(60,80,200); afkDiv.BorderSizePixel = 0
+afkDiv.BackgroundTransparency = 0.6; afkDiv.Parent = tpPanel
 
 local afkBtn = Instance.new("TextButton")
-afkBtn.Size = UDim2.new(1, -20, 0, 42)
-afkBtn.Position = UDim2.new(0, 10, 0, afkDividerY + 8)
-afkBtn.BackgroundColor3 = Color3.fromRGB(22, 34, 22)
-afkBtn.TextColor3 = Color3.fromRGB(160, 160, 160)
-afkBtn.Text = "Anti-AFK: OFF"
-afkBtn.TextSize = 13
-afkBtn.Font = Enum.Font.GothamSemibold
-afkBtn.BorderSizePixel = 0
-afkBtn.AutoButtonColor = false
-afkBtn.Parent = panel
+afkBtn.Size = UDim2.new(1,-20,0,42); afkBtn.Position = UDim2.new(0,10,0,afkY)
+afkBtn.BackgroundColor3 = Color3.fromRGB(22,34,22); afkBtn.TextColor3 = Color3.fromRGB(160,160,160)
+afkBtn.Text = "Anti-AFK: OFF"; afkBtn.TextSize = 13; afkBtn.Font = Enum.Font.GothamSemibold
+afkBtn.BorderSizePixel = 0; afkBtn.AutoButtonColor = false; afkBtn.Parent = tpPanel
 
-local afkCorner = Instance.new("UICorner")
-afkCorner.CornerRadius = UDim.new(0, 9)
-afkCorner.Parent = afkBtn
-
-local afkStroke = Instance.new("UIStroke")
-afkStroke.Color = Color3.fromRGB(80, 200, 100)
-afkStroke.Thickness = 1
-afkStroke.Transparency = 0.6
-afkStroke.Parent = afkBtn
-
-local afkAccent = Instance.new("Frame")
-afkAccent.Size = UDim2.new(0, 3, 0.6, 0)
-afkAccent.Position = UDim2.new(0, 0, 0.2, 0)
-afkAccent.BackgroundColor3 = Color3.fromRGB(80, 200, 100)
-afkAccent.BorderSizePixel = 0
-afkAccent.Parent = afkBtn
-
-local afkAccentCorner = Instance.new("UICorner")
-afkAccentCorner.CornerRadius = UDim.new(1, 0)
-afkAccentCorner.Parent = afkAccent
+local afkC = Instance.new("UICorner"); afkC.CornerRadius = UDim.new(0,9); afkC.Parent = afkBtn
+local afkS = Instance.new("UIStroke"); afkS.Color = Color3.fromRGB(80,200,100); afkS.Thickness = 1; afkS.Transparency = 0.6; afkS.Parent = afkBtn
+local afkA = Instance.new("Frame"); afkA.Size = UDim2.new(0,3,0.6,0); afkA.Position = UDim2.new(0,0,0.2,0)
+afkA.BackgroundColor3 = Color3.fromRGB(80,200,100); afkA.BorderSizePixel = 0; afkA.Parent = afkBtn
+local afkAC = Instance.new("UICorner"); afkAC.CornerRadius = UDim.new(1,0); afkAC.Parent = afkA
 
 local afkEnabled = false
-
 player.Idled:Connect(function()
-	if afkEnabled then
-		VirtualUser:CaptureController()
-		VirtualUser:ClickButton2(Vector2.new())
-	end
+	if afkEnabled then VirtualUser:CaptureController(); VirtualUser:ClickButton2(Vector2.new()) end
 end)
-
-afkBtn.MouseEnter:Connect(function()
-	TweenService:Create(afkBtn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(28, 44, 28) }):Play()
-	TweenService:Create(afkStroke, TweenInfo.new(0.15), { Transparency = 0 }):Play()
-end)
-
+afkBtn.MouseEnter:Connect(function() TweenService:Create(afkBtn,TweenInfo.new(0.15),{BackgroundColor3=Color3.fromRGB(28,44,28)}):Play(); TweenService:Create(afkS,TweenInfo.new(0.15),{Transparency=0}):Play() end)
 afkBtn.MouseLeave:Connect(function()
-	local bg = afkEnabled and Color3.fromRGB(28, 44, 28) or Color3.fromRGB(22, 34, 22)
-	TweenService:Create(afkBtn, TweenInfo.new(0.15), { BackgroundColor3 = bg }):Play()
-	TweenService:Create(afkStroke, TweenInfo.new(0.15), { Transparency = 0.6 }):Play()
+	TweenService:Create(afkBtn,TweenInfo.new(0.15),{BackgroundColor3=afkEnabled and Color3.fromRGB(28,44,28) or Color3.fromRGB(22,34,22)}):Play()
+	TweenService:Create(afkS,TweenInfo.new(0.15),{Transparency=0.6}):Play()
 end)
-
 afkBtn.MouseButton1Click:Connect(function()
 	afkEnabled = not afkEnabled
-	if afkEnabled then
-		afkBtn.Text = "Anti-AFK: ON"
-		afkBtn.TextColor3 = Color3.fromRGB(120, 220, 140)
-		afkBtn.BackgroundColor3 = Color3.fromRGB(28, 44, 28)
-	else
-		afkBtn.Text = "Anti-AFK: OFF"
-		afkBtn.TextColor3 = Color3.fromRGB(160, 160, 160)
-		afkBtn.BackgroundColor3 = Color3.fromRGB(22, 34, 22)
-	end
+	afkBtn.Text = afkEnabled and "Anti-AFK: ON" or "Anti-AFK: OFF"
+	afkBtn.TextColor3 = afkEnabled and Color3.fromRGB(120,220,140) or Color3.fromRGB(160,160,160)
+	afkBtn.BackgroundColor3 = afkEnabled and Color3.fromRGB(28,44,28) or Color3.fromRGB(22,34,22)
 end)
 
 -- ╔══════════════════════════════╗
 --         AUTO-FARM BUTTON
 -- ╚══════════════════════════════╝
--- Cycle:
---   1. Countdown 6m30s
---   2. TP to Judgement position -> press 2
---   3. Wait 10s
---   4. TP to Soul City position -> press 3
---   5. Repeat
 
-local farmDividerY = afkDividerY + 58
+local farmY = afkY + 58
 
-local farmDivider = Instance.new("Frame")
-farmDivider.Size = UDim2.new(1, -24, 0, 1)
-farmDivider.Position = UDim2.new(0, 12, 0, farmDividerY)
-farmDivider.BackgroundColor3 = Color3.fromRGB(60, 80, 200)
-farmDivider.BorderSizePixel = 0
-farmDivider.BackgroundTransparency = 0.6
-farmDivider.Parent = panel
+local farmDiv = Instance.new("Frame")
+farmDiv.Size = UDim2.new(1,-24,0,1); farmDiv.Position = UDim2.new(0,12,0,farmY-6)
+farmDiv.BackgroundColor3 = Color3.fromRGB(60,80,200); farmDiv.BorderSizePixel = 0
+farmDiv.BackgroundTransparency = 0.6; farmDiv.Parent = tpPanel
 
 local farmBtn = Instance.new("TextButton")
-farmBtn.Size = UDim2.new(1, -20, 0, 42)
-farmBtn.Position = UDim2.new(0, 10, 0, farmDividerY + 8)
-farmBtn.BackgroundColor3 = Color3.fromRGB(34, 22, 34)
-farmBtn.TextColor3 = Color3.fromRGB(160, 160, 160)
-farmBtn.Text = "Auto-Farm: OFF"
-farmBtn.TextSize = 13
-farmBtn.Font = Enum.Font.GothamSemibold
-farmBtn.BorderSizePixel = 0
-farmBtn.AutoButtonColor = false
-farmBtn.Parent = panel
+farmBtn.Size = UDim2.new(1,-20,0,42); farmBtn.Position = UDim2.new(0,10,0,farmY)
+farmBtn.BackgroundColor3 = Color3.fromRGB(34,22,34); farmBtn.TextColor3 = Color3.fromRGB(160,160,160)
+farmBtn.Text = "Auto-Farm: OFF"; farmBtn.TextSize = 13; farmBtn.Font = Enum.Font.GothamSemibold
+farmBtn.BorderSizePixel = 0; farmBtn.AutoButtonColor = false; farmBtn.Parent = tpPanel
 
-local farmCorner = Instance.new("UICorner")
-farmCorner.CornerRadius = UDim.new(0, 9)
-farmCorner.Parent = farmBtn
+local farmC = Instance.new("UICorner"); farmC.CornerRadius = UDim.new(0,9); farmC.Parent = farmBtn
+local farmS = Instance.new("UIStroke"); farmS.Color = Color3.fromRGB(200,100,255); farmS.Thickness = 1; farmS.Transparency = 0.6; farmS.Parent = farmBtn
+local farmA = Instance.new("Frame"); farmA.Size = UDim2.new(0,3,0.6,0); farmA.Position = UDim2.new(0,0,0.2,0)
+farmA.BackgroundColor3 = Color3.fromRGB(200,100,255); farmA.BorderSizePixel = 0; farmA.Parent = farmBtn
+local farmAC = Instance.new("UICorner"); farmAC.CornerRadius = UDim.new(1,0); farmAC.Parent = farmA
 
-local farmStroke = Instance.new("UIStroke")
-farmStroke.Color = Color3.fromRGB(200, 100, 255)
-farmStroke.Thickness = 1
-farmStroke.Transparency = 0.6
-farmStroke.Parent = farmBtn
-
-local farmAccent = Instance.new("Frame")
-farmAccent.Size = UDim2.new(0, 3, 0.6, 0)
-farmAccent.Position = UDim2.new(0, 0, 0.2, 0)
-farmAccent.BackgroundColor3 = Color3.fromRGB(200, 100, 255)
-farmAccent.BorderSizePixel = 0
-farmAccent.Parent = farmBtn
-
-local farmAccentCorner = Instance.new("UICorner")
-farmAccentCorner.CornerRadius = UDim.new(1, 0)
-farmAccentCorner.Parent = farmAccent
-
--- Farm state
 local farmEnabled = false
 local soulcity  = locations[1]
 local judgement = locations[2]
-
-local FARM_WAIT   = 6 * 60 + 30  -- 6 minutes 30 seconds timer before going to Judgement
-local RETURN_WAIT = 6             -- seconds to wait at Judgement before going back
-
-local VIM = game:GetService("VirtualInputManager")
-
-local function simulateKeyPress(keyCode)
-	VIM:SendKeyEvent(true, keyCode, false, game)
-	task.wait(0.1)
-	VIM:SendKeyEvent(false, keyCode, false, game)
-end
+local FARM_WAIT   = 6 * 60 + 30
+local RETURN_WAIT = 6
 
 local function runFarmLoop()
 	while farmEnabled do
-
-		-- STEP 1: TP to Soul City island then position
-		setStatusPermanent("Farm: Going to Soul City...", Color3.fromRGB(99, 179, 255))
+		setStatusPermanent("Farm: Going to Soul City...", Color3.fromRGB(99,179,255))
 		pcall(doTeleport, soulcity)
 		if not farmEnabled then break end
 		task.wait(0.3)
-
-		-- STEP 2: Press 3
 		simulateKeyPress(Enum.KeyCode.One)
 		if not farmEnabled then break end
 
-		-- STEP 3: Countdown 6m30s
 		local remaining = FARM_WAIT
 		while remaining > 0 and farmEnabled do
-			local mins = math.floor(remaining / 60)
-			local secs = remaining % 60
-			setStatusPermanent(
-				string.format("Farm: Next in %d:%02d", mins, secs),
-				Color3.fromRGB(200, 100, 255)
-			)
-			task.wait(1)
-			remaining -= 1
+			local m = math.floor(remaining/60); local s = remaining%60
+			setStatusPermanent(string.format("Farm: Next in %d:%02d",m,s), Color3.fromRGB(200,100,255))
+			task.wait(1); remaining -= 1
 		end
 		if not farmEnabled then break end
 
-		-- STEP 4: TP to Judgement island then position
-		setStatusPermanent("Farm: Going to Judgement...", Color3.fromRGB(255, 120, 120))
+		setStatusPermanent("Farm: Going to Judgement...", Color3.fromRGB(255,120,120))
 		pcall(doTeleport, judgement)
 		if not farmEnabled then break end
 		task.wait(0.3)
-
-		-- STEP 5: Press 2
 		simulateKeyPress(Enum.KeyCode.Two)
 		if not farmEnabled then break end
 
-		-- STEP 6: Wait 3 secs then press X
-		task.wait(3)
-		if not farmEnabled then break end
+		task.wait(3); if not farmEnabled then break end
 		simulateKeyPress(Enum.KeyCode.X)
-
-		-- STEP 7: Wait 3 secs then press C
-		task.wait(3)
-		if not farmEnabled then break end
+		task.wait(3); if not farmEnabled then break end
 		simulateKeyPress(Enum.KeyCode.C)
 
-		-- STEP 8: Wait 6 seconds then TP back
-		local wait = RETURN_WAIT
-		while wait > 0 and farmEnabled do
-			setStatusPermanent(
-				string.format("Farm: At Judgement, back in %ds", wait),
-				Color3.fromRGB(255, 120, 120)
-			)
-			task.wait(1)
-			wait -= 1
+		local w = RETURN_WAIT
+		while w > 0 and farmEnabled do
+			setStatusPermanent(string.format("Farm: At Judgement, back in %ds",w), Color3.fromRGB(255,120,120))
+			task.wait(1); w -= 1
 		end
 		if not farmEnabled then break end
-
-		-- Loop back to STEP 1
 	end
-
-	setStatusPermanent("", Color3.fromRGB(120, 220, 140))
+	setStatusPermanent("", Color3.fromRGB(120,220,140))
 end
 
-farmBtn.MouseEnter:Connect(function()
-	TweenService:Create(farmBtn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(44, 28, 44) }):Play()
-	TweenService:Create(farmStroke, TweenInfo.new(0.15), { Transparency = 0 }):Play()
-end)
-
+farmBtn.MouseEnter:Connect(function() TweenService:Create(farmBtn,TweenInfo.new(0.15),{BackgroundColor3=Color3.fromRGB(44,28,44)}):Play(); TweenService:Create(farmS,TweenInfo.new(0.15),{Transparency=0}):Play() end)
 farmBtn.MouseLeave:Connect(function()
-	local bg = farmEnabled and Color3.fromRGB(44, 28, 44) or Color3.fromRGB(34, 22, 34)
-	TweenService:Create(farmBtn, TweenInfo.new(0.15), { BackgroundColor3 = bg }):Play()
-	TweenService:Create(farmStroke, TweenInfo.new(0.15), { Transparency = 0.6 }):Play()
+	TweenService:Create(farmBtn,TweenInfo.new(0.15),{BackgroundColor3=farmEnabled and Color3.fromRGB(44,28,44) or Color3.fromRGB(34,22,34)}):Play()
+	TweenService:Create(farmS,TweenInfo.new(0.15),{Transparency=0.6}):Play()
 end)
-
 farmBtn.MouseButton1Click:Connect(function()
 	farmEnabled = not farmEnabled
 	if farmEnabled then
-		farmBtn.Text = "Auto-Farm: ON"
-		farmBtn.TextColor3 = Color3.fromRGB(200, 100, 255)
-		farmBtn.BackgroundColor3 = Color3.fromRGB(44, 28, 44)
+		farmBtn.Text = "Auto-Farm: ON"; farmBtn.TextColor3 = Color3.fromRGB(200,100,255); farmBtn.BackgroundColor3 = Color3.fromRGB(44,28,44)
 		task.spawn(runFarmLoop)
 	else
-		farmBtn.Text = "Auto-Farm: OFF"
-		farmBtn.TextColor3 = Color3.fromRGB(160, 160, 160)
-		farmBtn.BackgroundColor3 = Color3.fromRGB(34, 22, 34)
+		farmBtn.Text = "Auto-Farm: OFF"; farmBtn.TextColor3 = Color3.fromRGB(160,160,160); farmBtn.BackgroundColor3 = Color3.fromRGB(34,22,34)
 	end
 end)
 
@@ -462,254 +421,241 @@ end)
 --          KILL AURA BUTTON
 -- ╚══════════════════════════════╝
 
-local auraDividerY = farmDividerY + 58
+local auraY = farmY + 58
 
-local auraDivider = Instance.new("Frame")
-auraDivider.Size = UDim2.new(1, -24, 0, 1)
-auraDivider.Position = UDim2.new(0, 12, 0, auraDividerY)
-auraDivider.BackgroundColor3 = Color3.fromRGB(60, 80, 200)
-auraDivider.BorderSizePixel = 0
-auraDivider.BackgroundTransparency = 0.6
-auraDivider.Parent = panel
+local auraDiv = Instance.new("Frame")
+auraDiv.Size = UDim2.new(1,-24,0,1); auraDiv.Position = UDim2.new(0,12,0,auraY-6)
+auraDiv.BackgroundColor3 = Color3.fromRGB(60,80,200); auraDiv.BorderSizePixel = 0
+auraDiv.BackgroundTransparency = 0.6; auraDiv.Parent = tpPanel
 
 local auraBtn = Instance.new("TextButton")
-auraBtn.Size = UDim2.new(1, -20, 0, 42)
-auraBtn.Position = UDim2.new(0, 10, 0, auraDividerY + 8)
-auraBtn.BackgroundColor3 = Color3.fromRGB(40, 18, 18)
-auraBtn.TextColor3 = Color3.fromRGB(160, 160, 160)
-auraBtn.Text = "Kill Aura: OFF"
-auraBtn.TextSize = 13
-auraBtn.Font = Enum.Font.GothamSemibold
-auraBtn.BorderSizePixel = 0
-auraBtn.AutoButtonColor = false
-auraBtn.Parent = panel
+auraBtn.Size = UDim2.new(1,-20,0,42); auraBtn.Position = UDim2.new(0,10,0,auraY)
+auraBtn.BackgroundColor3 = Color3.fromRGB(40,18,18); auraBtn.TextColor3 = Color3.fromRGB(160,160,160)
+auraBtn.Text = "Kill Aura: OFF"; auraBtn.TextSize = 13; auraBtn.Font = Enum.Font.GothamSemibold
+auraBtn.BorderSizePixel = 0; auraBtn.AutoButtonColor = false; auraBtn.Parent = tpPanel
 
-local auraCorner = Instance.new("UICorner")
-auraCorner.CornerRadius = UDim.new(0, 9)
-auraCorner.Parent = auraBtn
+local auraC = Instance.new("UICorner"); auraC.CornerRadius = UDim.new(0,9); auraC.Parent = auraBtn
+local auraS = Instance.new("UIStroke"); auraS.Color = Color3.fromRGB(255,60,60); auraS.Thickness = 1; auraS.Transparency = 0.6; auraS.Parent = auraBtn
+local auraA = Instance.new("Frame"); auraA.Size = UDim2.new(0,3,0.6,0); auraA.Position = UDim2.new(0,0,0.2,0)
+auraA.BackgroundColor3 = Color3.fromRGB(255,60,60); auraA.BorderSizePixel = 0; auraA.Parent = auraBtn
+local auraAC = Instance.new("UICorner"); auraAC.CornerRadius = UDim.new(1,0); auraAC.Parent = auraA
 
-local auraStroke = Instance.new("UIStroke")
-auraStroke.Color = Color3.fromRGB(255, 60, 60)
-auraStroke.Thickness = 1
-auraStroke.Transparency = 0.6
-auraStroke.Parent = auraBtn
-
-local auraAccent = Instance.new("Frame")
-auraAccent.Size = UDim2.new(0, 3, 0.6, 0)
-auraAccent.Position = UDim2.new(0, 0, 0.2, 0)
-auraAccent.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
-auraAccent.BorderSizePixel = 0
-auraAccent.Parent = auraBtn
-
-local auraAccentCorner = Instance.new("UICorner")
-auraAccentCorner.CornerRadius = UDim.new(1, 0)
-auraAccentCorner.Parent = auraAccent
-
--- Kill Aura logic
-local auraEnabled = false
-local AURA_MIN = 0     -- fastest (1 frame, no wait)
-local AURA_MAX = 1.0   -- slowest (1s)
-local auraInterval = 0.2
-
--- Slider UI
-local sliderTrackY = auraDividerY + 56
-
+-- Slider
+local sliderY = auraY + 50
 local sliderLabel = Instance.new("TextLabel")
-sliderLabel.Size = UDim2.new(1, -20, 0, 18)
-sliderLabel.Position = UDim2.new(0, 10, 0, sliderTrackY)
-sliderLabel.BackgroundTransparency = 1
-sliderLabel.Text = "Speed: 0.20s"
-sliderLabel.TextColor3 = Color3.fromRGB(200, 140, 140)
-sliderLabel.TextSize = 11
-sliderLabel.Font = Enum.Font.Gotham
-sliderLabel.TextXAlignment = Enum.TextXAlignment.Left
-sliderLabel.Parent = panel
+sliderLabel.Size = UDim2.new(1,-20,0,18); sliderLabel.Position = UDim2.new(0,10,0,sliderY)
+sliderLabel.BackgroundTransparency = 1; sliderLabel.Text = "Speed: 0.200s"
+sliderLabel.TextColor3 = Color3.fromRGB(200,140,140); sliderLabel.TextSize = 11
+sliderLabel.Font = Enum.Font.Gotham; sliderLabel.TextXAlignment = Enum.TextXAlignment.Left
+sliderLabel.Parent = tpPanel
 
 local sliderTrack = Instance.new("Frame")
-sliderTrack.Size = UDim2.new(1, -20, 0, 6)
-sliderTrack.Position = UDim2.new(0, 10, 0, sliderTrackY + 22)
-sliderTrack.BackgroundColor3 = Color3.fromRGB(40, 30, 40)
-sliderTrack.BorderSizePixel = 0
-sliderTrack.Parent = panel
-
-local sliderTrackCorner = Instance.new("UICorner")
-sliderTrackCorner.CornerRadius = UDim.new(1, 0)
-sliderTrackCorner.Parent = sliderTrack
+sliderTrack.Size = UDim2.new(1,-20,0,6); sliderTrack.Position = UDim2.new(0,10,0,sliderY+22)
+sliderTrack.BackgroundColor3 = Color3.fromRGB(40,30,40); sliderTrack.BorderSizePixel = 0; sliderTrack.Parent = tpPanel
+local stc = Instance.new("UICorner"); stc.CornerRadius = UDim.new(1,0); stc.Parent = sliderTrack
 
 local sliderFill = Instance.new("Frame")
-sliderFill.Size = UDim2.new(0.18, 0, 1, 0) -- default position ~0.2s
-sliderFill.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
-sliderFill.BorderSizePixel = 0
-sliderFill.Parent = sliderTrack
-
-local sliderFillCorner = Instance.new("UICorner")
-sliderFillCorner.CornerRadius = UDim.new(1, 0)
-sliderFillCorner.Parent = sliderFill
+sliderFill.Size = UDim2.new(0.18,0,1,0); sliderFill.BackgroundColor3 = Color3.fromRGB(255,60,60)
+sliderFill.BorderSizePixel = 0; sliderFill.Parent = sliderTrack
+local sfc = Instance.new("UICorner"); sfc.CornerRadius = UDim.new(1,0); sfc.Parent = sliderFill
 
 local sliderKnob = Instance.new("TextButton")
-sliderKnob.Size = UDim2.new(0, 16, 0, 16)
-sliderKnob.AnchorPoint = Vector2.new(0.5, 0.5)
-sliderKnob.Position = UDim2.new(0.18, 0, 0.5, 0)
-sliderKnob.BackgroundColor3 = Color3.fromRGB(255, 100, 100)
-sliderKnob.BorderSizePixel = 0
-sliderKnob.Text = ""
-sliderKnob.Parent = sliderTrack
+sliderKnob.Size = UDim2.new(0,16,0,16); sliderKnob.AnchorPoint = Vector2.new(0.5,0.5)
+sliderKnob.Position = UDim2.new(0.18,0,0.5,0); sliderKnob.BackgroundColor3 = Color3.fromRGB(255,100,100)
+sliderKnob.BorderSizePixel = 0; sliderKnob.Text = ""; sliderKnob.Parent = sliderTrack
+local skc = Instance.new("UICorner"); skc.CornerRadius = UDim.new(1,0); skc.Parent = sliderKnob
 
-local sliderKnobCorner = Instance.new("UICorner")
-sliderKnobCorner.CornerRadius = UDim.new(1, 0)
-sliderKnobCorner.Parent = sliderKnob
-
--- Slider drag logic
+local AURA_MIN = 0; local AURA_MAX = 1.0; local auraInterval = 0.2; local auraEnabled = false
 local dragging = false
-local UIS = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
 
 local function updateSlider(pct)
-	pct = math.clamp(pct, 0, 1)
-	-- pct=0 -> slowest (AURA_MAX), pct=1 -> fastest (AURA_MIN)
-	auraInterval = AURA_MAX - pct * (AURA_MAX - AURA_MIN)
-	sliderFill.Size = UDim2.new(pct, 0, 1, 0)
-	sliderKnob.Position = UDim2.new(pct, 0, 0.5, 0)
-	if auraInterval == 0 then
-		sliderLabel.Text = "Speed: MAX"
-	else
-		sliderLabel.Text = string.format("Speed: %.3fs", auraInterval)
-	end
+	pct = math.clamp(pct,0,1)
+	auraInterval = AURA_MAX - pct*(AURA_MAX-AURA_MIN)
+	sliderFill.Size = UDim2.new(pct,0,1,0)
+	sliderKnob.Position = UDim2.new(pct,0,0.5,0)
+	sliderLabel.Text = auraInterval==0 and "Speed: MAX" or string.format("Speed: %.3fs",auraInterval)
 end
 
 local function getPctFromX(x)
-	local trackPos = sliderTrack.AbsolutePosition.X
-	local trackSize = sliderTrack.AbsoluteSize.X
-	return math.clamp((x - trackPos) / trackSize, 0, 1)
+	return math.clamp((x-sliderTrack.AbsolutePosition.X)/sliderTrack.AbsoluteSize.X,0,1)
 end
 
--- Start drag from knob
-sliderKnob.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 then
-		dragging = true
+sliderKnob.InputBegan:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then dragging=true end end)
+sliderTrack.InputBegan:Connect(function(i)
+	if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then
+		dragging=true; updateSlider(getPctFromX(i.Position.X))
 	end
 end)
-
--- Start drag from clicking anywhere on track
-sliderTrack.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 then
-		dragging = true
-		updateSlider(getPctFromX(input.Position.X))
-	end
-end)
-
--- Touch support - start
-sliderKnob.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.Touch then
-		dragging = true
-	end
-end)
-
-sliderTrack.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.Touch then
-		dragging = true
-		updateSlider(getPctFromX(input.Position.X))
-	end
-end)
-
--- Update every frame while dragging (most reliable method)
-RunService.RenderStepped:Connect(function()
-	if dragging then
-		local mousePos = UIS:GetMouseLocation()
-		updateSlider(getPctFromX(mousePos.X))
-	end
-end)
-
--- Touch move
-UIS.TouchMoved:Connect(function(touch)
-	if dragging then
-		updateSlider(getPctFromX(touch.Position.X))
-	end
-end)
-
--- Stop drag on mouse release
-UIS.InputEnded:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1
-		or input.UserInputType == Enum.UserInputType.Touch then
-		dragging = false
-	end
+RunService.RenderStepped:Connect(function() if dragging then updateSlider(getPctFromX(UserInputService:GetMouseLocation().X)) end end)
+UserInputService.TouchMoved:Connect(function(t) if dragging then updateSlider(getPctFromX(t.Position.X)) end end)
+UserInputService.InputEnded:Connect(function(i)
+	if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then dragging=false end
 end)
 
 local function runKillAura()
 	while auraEnabled do
 		pcall(function()
-			ReplicatedStorage
-				:WaitForChild("CombatSystem")
-				:WaitForChild("Remotes")
-				:WaitForChild("RequestHit")
-				:FireServer()
+			ReplicatedStorage:WaitForChild("CombatSystem"):WaitForChild("Remotes"):WaitForChild("RequestHit"):FireServer()
 		end)
-		if auraInterval > 0 then
-			task.wait(auraInterval)
-		else
-			task.wait() -- yield for 1 frame only, absolute max speed
-		end
+		if auraInterval>0 then task.wait(auraInterval) else task.wait() end
 	end
 end
 
-auraBtn.MouseEnter:Connect(function()
-	TweenService:Create(auraBtn, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(55, 22, 22) }):Play()
-	TweenService:Create(auraStroke, TweenInfo.new(0.15), { Transparency = 0 }):Play()
-end)
-
+auraBtn.MouseEnter:Connect(function() TweenService:Create(auraBtn,TweenInfo.new(0.15),{BackgroundColor3=Color3.fromRGB(55,22,22)}):Play(); TweenService:Create(auraS,TweenInfo.new(0.15),{Transparency=0}):Play() end)
 auraBtn.MouseLeave:Connect(function()
-	local bg = auraEnabled and Color3.fromRGB(55, 22, 22) or Color3.fromRGB(40, 18, 18)
-	TweenService:Create(auraBtn, TweenInfo.new(0.15), { BackgroundColor3 = bg }):Play()
-	TweenService:Create(auraStroke, TweenInfo.new(0.15), { Transparency = 0.6 }):Play()
+	TweenService:Create(auraBtn,TweenInfo.new(0.15),{BackgroundColor3=auraEnabled and Color3.fromRGB(55,22,22) or Color3.fromRGB(40,18,18)}):Play()
+	TweenService:Create(auraS,TweenInfo.new(0.15),{Transparency=0.6}):Play()
 end)
-
 auraBtn.MouseButton1Click:Connect(function()
 	auraEnabled = not auraEnabled
 	if auraEnabled then
-		auraBtn.Text = "Kill Aura: ON"
-		auraBtn.TextColor3 = Color3.fromRGB(255, 80, 80)
-		auraBtn.BackgroundColor3 = Color3.fromRGB(55, 22, 22)
+		auraBtn.Text="Kill Aura: ON"; auraBtn.TextColor3=Color3.fromRGB(255,80,80); auraBtn.BackgroundColor3=Color3.fromRGB(55,22,22)
 		task.spawn(runKillAura)
 	else
-		auraBtn.Text = "Kill Aura: OFF"
-		auraBtn.TextColor3 = Color3.fromRGB(160, 160, 160)
-		auraBtn.BackgroundColor3 = Color3.fromRGB(40, 18, 18)
+		auraBtn.Text="Kill Aura: OFF"; auraBtn.TextColor3=Color3.fromRGB(160,160,160); auraBtn.BackgroundColor3=Color3.fromRGB(40,18,18)
 	end
 end)
 
+-- ╔══════════════════════════════╗
+--      AUTO SKILLS TAB (Tab 2)
+-- ╚══════════════════════════════╝
 
+local skills = {
+	{ label = "Skill Z", key = Enum.KeyCode.Z, color = Color3.fromRGB(120, 180, 255) },
+	{ label = "Skill X", key = Enum.KeyCode.X, color = Color3.fromRGB(255, 160, 80)  },
+	{ label = "Skill C", key = Enum.KeyCode.C, color = Color3.fromRGB(180, 100, 255) },
+	{ label = "Skill V", key = Enum.KeyCode.V, color = Color3.fromRGB(80, 220, 160)  },
+	{ label = "Skill F", key = Enum.KeyCode.F, color = Color3.fromRGB(255, 80, 120)  },
+}
+
+local skillThreads = {}
+
+local function makeSkillBtn(skill, index)
+	local yPos = 50 + (index - 1) * 50
+
+	local btn = Instance.new("TextButton")
+	btn.Size = UDim2.new(1,-20,0,42)
+	btn.Position = UDim2.new(0,10,0,yPos)
+	btn.BackgroundColor3 = Color3.fromRGB(22,24,40)
+	btn.TextColor3 = Color3.fromRGB(200,210,255)
+	btn.Text = skill.label .. "  [OFF]"
+	btn.TextSize = 13
+	btn.Font = Enum.Font.GothamSemibold
+	btn.BorderSizePixel = 0
+	btn.AutoButtonColor = false
+	btn.Parent = skillsPanel
+
+	local bc = Instance.new("UICorner"); bc.CornerRadius = UDim.new(0,9); bc.Parent = btn
+	local bs = Instance.new("UIStroke"); bs.Color = skill.color; bs.Thickness = 1; bs.Transparency = 0.6; bs.Parent = btn
+	local ba = Instance.new("Frame"); ba.Size = UDim2.new(0,3,0.6,0); ba.Position = UDim2.new(0,0,0.2,0)
+	ba.BackgroundColor3 = skill.color; ba.BorderSizePixel = 0; ba.Parent = btn
+	local bac = Instance.new("UICorner"); bac.CornerRadius = UDim.new(1,0); bac.Parent = ba
+
+	local enabled = false
+
+	btn.MouseEnter:Connect(function()
+		TweenService:Create(btn,TweenInfo.new(0.15),{BackgroundColor3=Color3.fromRGB(30,34,60)}):Play()
+		TweenService:Create(bs,TweenInfo.new(0.15),{Transparency=0}):Play()
+	end)
+	btn.MouseLeave:Connect(function()
+		TweenService:Create(btn,TweenInfo.new(0.15),{BackgroundColor3=enabled and Color3.fromRGB(28,34,55) or Color3.fromRGB(22,24,40)}):Play()
+		TweenService:Create(bs,TweenInfo.new(0.15),{Transparency=0.6}):Play()
+	end)
+
+	btn.MouseButton1Click:Connect(function()
+		enabled = not enabled
+		if enabled then
+			btn.Text = skill.label .. "  [ON]"
+			btn.TextColor3 = skill.color
+			btn.BackgroundColor3 = Color3.fromRGB(28,34,55)
+			skillThreads[index] = task.spawn(function()
+				while enabled do
+					simulateKeyPress(skill.key)
+					task.wait(0.5) -- press every 0.5s, adjust per skill cooldown
+				end
+			end)
+		else
+			btn.Text = skill.label .. "  [OFF]"
+			btn.TextColor3 = Color3.fromRGB(200,210,255)
+			btn.BackgroundColor3 = Color3.fromRGB(22,24,40)
+			enabled = false
+		end
+	end)
+end
+
+for i, skill in ipairs(skills) do
+	makeSkillBtn(skill, i)
+end
+
+-- ╔══════════════════════════════╗
+--         TAB SWITCHING
+-- ╚══════════════════════════════╝
+
+local activeTab = "tp" -- "tp" or "skills"
+
+local function showTP()
+	activeTab = "tp"
+	skillsPanel.Visible = false
+	tpPanel.Visible = true
+	tpPanel.Size = UDim2.new(0,panelW,0,0)
+	TweenService:Create(tpPanel,TweenInfo.new(0.2,Enum.EasingStyle.Back,Enum.EasingDirection.Out),{Size=UDim2.new(0,panelW,0,tpPanelHeight)}):Play()
+	-- Tab highlight
+	tabTP.BackgroundColor3 = Color3.fromRGB(30,40,80); tabTP.TextColor3 = Color3.fromRGB(180,200,255)
+	tabSkillsOnTP.BackgroundColor3 = Color3.fromRGB(22,22,30); tabSkillsOnTP.TextColor3 = Color3.fromRGB(120,120,140)
+end
+
+local function showSkills()
+	activeTab = "skills"
+	tpPanel.Visible = false
+	skillsPanel.Visible = true
+	skillsPanel.Size = UDim2.new(0,panelW,0,0)
+	TweenService:Create(skillsPanel,TweenInfo.new(0.2,Enum.EasingStyle.Back,Enum.EasingDirection.Out),{Size=UDim2.new(0,panelW,0,skillsPanelHeight)}):Play()
+	-- Tab highlight
+	tabSkills.BackgroundColor3 = Color3.fromRGB(50,30,15); tabSkills.TextColor3 = Color3.fromRGB(255,160,80)
+	tabTPOnSkills.BackgroundColor3 = Color3.fromRGB(22,22,30); tabTPOnSkills.TextColor3 = Color3.fromRGB(120,120,140)
+end
+
+tabSkillsOnTP.MouseButton1Click:Connect(showSkills)
+tabTPOnSkills.MouseButton1Click:Connect(showTP)
+tabTP.MouseButton1Click:Connect(function() end) -- already on TP
+tabSkills.MouseButton1Click:Connect(function() end) -- already on Skills
+
+-- ╔══════════════════════════════╗
+--         TOGGLE LOGIC
+-- ╚══════════════════════════════╝
 
 local isOpen = false
 
-local function togglePanel()
-	isOpen = not isOpen
-
-	if isOpen then
-		panel.Size = UDim2.new(0, 220, 0, 0)
-		panel.Visible = true
-		TweenService:Create(panel, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-			Size = UDim2.new(0, 220, 0, panelHeight),
-		}):Play()
-		toggleBtn.Text = "X"
+local function openUI()
+	isOpen = true
+	toggleBtn.Text = "X"
+	if activeTab == "skills" then
+		showSkills()
 	else
-		TweenService:Create(panel, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-			Size = UDim2.new(0, 220, 0, 0),
-		}):Play()
-		task.delay(0.21, function()
-			if not isOpen then
-				panel.Visible = false
-			end
-		end)
-		toggleBtn.Text = "TP"
+		showTP()
 	end
 end
 
-toggleBtn.MouseButton1Click:Connect(togglePanel)
+local function closeUI()
+	isOpen = false
+	toggleBtn.Text = "TP"
+	TweenService:Create(tpPanel,TweenInfo.new(0.15,Enum.EasingStyle.Quad,Enum.EasingDirection.In),{Size=UDim2.new(0,panelW,0,0)}):Play()
+	TweenService:Create(skillsPanel,TweenInfo.new(0.15,Enum.EasingStyle.Quad,Enum.EasingDirection.In),{Size=UDim2.new(0,panelW,0,0)}):Play()
+	task.delay(0.16, function()
+		if not isOpen then
+			tpPanel.Visible = false
+			skillsPanel.Visible = false
+		end
+	end)
+end
 
--- Press M to toggle
+toggleBtn.MouseButton1Click:Connect(function()
+	if isOpen then closeUI() else openUI() end
+end)
+
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	if gameProcessed then return end
 	if input.KeyCode == Enum.KeyCode.M then
-		togglePanel()
+		if isOpen then closeUI() else openUI() end
 	end
 end)
