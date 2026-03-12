@@ -58,7 +58,7 @@ toggleStroke.Parent = toggleBtn
 --    TP PANEL (Tab 1)
 -- ╚══════════════════════════════╝
 
-local tpPanelHeight = 56 + (#locations * 54) + 230
+local tpPanelHeight = 56 + (#locations * 54) + 288
 local skillsPanelHeight = 56 + (5 * 54) + 10 -- 5 skill toggles
 
 local panelW = 220
@@ -418,7 +418,8 @@ farmBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ╔══════════════════════════════╗
---          KILL AURA BUTTON
+-- ╔══════════════════════════════╗
+--        KILL AURA (NORMAL)
 -- ╚══════════════════════════════╝
 
 local auraY = farmY + 58
@@ -440,11 +441,34 @@ local auraA = Instance.new("Frame"); auraA.Size = UDim2.new(0,3,0.6,0); auraA.Po
 auraA.BackgroundColor3 = Color3.fromRGB(255,60,60); auraA.BorderSizePixel = 0; auraA.Parent = auraBtn
 local auraAC = Instance.new("UICorner"); auraAC.CornerRadius = UDim.new(1,0); auraAC.Parent = auraA
 
--- Slider
-local sliderY = auraY + 50
+-- ╔══════════════════════════════╗
+--      KILL AURA (DANGER ⚠)
+-- ╚══════════════════════════════╝
+
+local dangerY = auraY + 52
+
+local dangerDiv = Instance.new("Frame")
+dangerDiv.Size = UDim2.new(1,-24,0,1); dangerDiv.Position = UDim2.new(0,12,0,dangerY-6)
+dangerDiv.BackgroundColor3 = Color3.fromRGB(200,80,0); dangerDiv.BorderSizePixel = 0
+dangerDiv.BackgroundTransparency = 0.5; dangerDiv.Parent = tpPanel
+
+local dangerBtn = Instance.new("TextButton")
+dangerBtn.Size = UDim2.new(1,-20,0,42); dangerBtn.Position = UDim2.new(0,10,0,dangerY)
+dangerBtn.BackgroundColor3 = Color3.fromRGB(40,14,0); dangerBtn.TextColor3 = Color3.fromRGB(160,160,160)
+dangerBtn.Text = "⚠ Kill Aura: OFF"; dangerBtn.TextSize = 13; dangerBtn.Font = Enum.Font.GothamBold
+dangerBtn.BorderSizePixel = 0; dangerBtn.AutoButtonColor = false; dangerBtn.Parent = tpPanel
+
+local dangerC = Instance.new("UICorner"); dangerC.CornerRadius = UDim.new(0,9); dangerC.Parent = dangerBtn
+local dangerS = Instance.new("UIStroke"); dangerS.Color = Color3.fromRGB(255,120,0); dangerS.Thickness = 1.5; dangerS.Transparency = 0.4; dangerS.Parent = dangerBtn
+local dangerA = Instance.new("Frame"); dangerA.Size = UDim2.new(0,3,0.6,0); dangerA.Position = UDim2.new(0,0,0.2,0)
+dangerA.BackgroundColor3 = Color3.fromRGB(255,120,0); dangerA.BorderSizePixel = 0; dangerA.Parent = dangerBtn
+local dangerAC = Instance.new("UICorner"); dangerAC.CornerRadius = UDim.new(1,0); dangerAC.Parent = dangerA
+
+-- Slider (shared label, sits below danger button)
+local sliderY = dangerY + 50
 local sliderLabel = Instance.new("TextLabel")
 sliderLabel.Size = UDim2.new(1,-20,0,18); sliderLabel.Position = UDim2.new(0,10,0,sliderY)
-sliderLabel.BackgroundTransparency = 1; sliderLabel.Text = "Speed: 0.200s"
+sliderLabel.BackgroundTransparency = 1; sliderLabel.Text = "Speed: 0.001s"
 sliderLabel.TextColor3 = Color3.fromRGB(200,140,140); sliderLabel.TextSize = 11
 sliderLabel.Font = Enum.Font.Gotham; sliderLabel.TextXAlignment = Enum.TextXAlignment.Left
 sliderLabel.Parent = tpPanel
@@ -455,25 +479,33 @@ sliderTrack.BackgroundColor3 = Color3.fromRGB(40,30,40); sliderTrack.BorderSizeP
 local stc = Instance.new("UICorner"); stc.CornerRadius = UDim.new(1,0); stc.Parent = sliderTrack
 
 local sliderFill = Instance.new("Frame")
-sliderFill.Size = UDim2.new(0.18,0,1,0); sliderFill.BackgroundColor3 = Color3.fromRGB(255,60,60)
+sliderFill.Size = UDim2.new(1,0,1,0); sliderFill.BackgroundColor3 = Color3.fromRGB(255,60,60)
 sliderFill.BorderSizePixel = 0; sliderFill.Parent = sliderTrack
 local sfc = Instance.new("UICorner"); sfc.CornerRadius = UDim.new(1,0); sfc.Parent = sliderFill
 
 local sliderKnob = Instance.new("TextButton")
 sliderKnob.Size = UDim2.new(0,16,0,16); sliderKnob.AnchorPoint = Vector2.new(0.5,0.5)
-sliderKnob.Position = UDim2.new(0.18,0,0.5,0); sliderKnob.BackgroundColor3 = Color3.fromRGB(255,100,100)
+sliderKnob.Position = UDim2.new(1,0,0.5,0); sliderKnob.BackgroundColor3 = Color3.fromRGB(255,100,100)
 sliderKnob.BorderSizePixel = 0; sliderKnob.Text = ""; sliderKnob.Parent = sliderTrack
 local skc = Instance.new("UICorner"); skc.CornerRadius = UDim.new(1,0); skc.Parent = sliderKnob
 
-local AURA_MIN = 0; local AURA_MAX = 1.0; local auraInterval = 0.2; local auraEnabled = false
+-- Kill Aura state
+-- Normal: fixed 0.001s | Danger: task.wait() = 1 frame, absolute max
+local auraEnabled  = false
+local dangerEnabled = false
 local dragging = false
+
+-- Slider only controls normal aura speed (0.001 to 1.0)
+local AURA_MIN = 0.001
+local AURA_MAX = 1.0
+local auraInterval = 0.001  -- default max speed
 
 local function updateSlider(pct)
 	pct = math.clamp(pct,0,1)
 	auraInterval = AURA_MAX - pct*(AURA_MAX-AURA_MIN)
 	sliderFill.Size = UDim2.new(pct,0,1,0)
 	sliderKnob.Position = UDim2.new(pct,0,0.5,0)
-	sliderLabel.Text = auraInterval==0 and "Speed: MAX" or string.format("Speed: %.3fs",auraInterval)
+	sliderLabel.Text = string.format("Speed: %.3fs", auraInterval)
 end
 
 local function getPctFromX(x)
@@ -492,15 +524,29 @@ UserInputService.InputEnded:Connect(function(i)
 	if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then dragging=false end
 end)
 
+local function fireHit()
+	pcall(function()
+		ReplicatedStorage:WaitForChild("CombatSystem"):WaitForChild("Remotes"):WaitForChild("RequestHit"):FireServer()
+	end)
+end
+
+-- Normal Kill Aura: fires at auraInterval (0.001s default, slider adjustable)
 local function runKillAura()
 	while auraEnabled do
-		pcall(function()
-			ReplicatedStorage:WaitForChild("CombatSystem"):WaitForChild("Remotes"):WaitForChild("RequestHit"):FireServer()
-		end)
-		if auraInterval>0 then task.wait(auraInterval) else task.wait() end
+		fireHit()
+		task.wait(auraInterval)
 	end
 end
 
+-- Danger Kill Aura: fires every single frame, no wait — absolute maximum
+local function runDangerAura()
+	while dangerEnabled do
+		fireHit()
+		task.wait() -- 1 frame yield only
+	end
+end
+
+-- Normal button
 auraBtn.MouseEnter:Connect(function() TweenService:Create(auraBtn,TweenInfo.new(0.15),{BackgroundColor3=Color3.fromRGB(55,22,22)}):Play(); TweenService:Create(auraS,TweenInfo.new(0.15),{Transparency=0}):Play() end)
 auraBtn.MouseLeave:Connect(function()
 	TweenService:Create(auraBtn,TweenInfo.new(0.15),{BackgroundColor3=auraEnabled and Color3.fromRGB(55,22,22) or Color3.fromRGB(40,18,18)}):Play()
@@ -513,6 +559,22 @@ auraBtn.MouseButton1Click:Connect(function()
 		task.spawn(runKillAura)
 	else
 		auraBtn.Text="Kill Aura: OFF"; auraBtn.TextColor3=Color3.fromRGB(160,160,160); auraBtn.BackgroundColor3=Color3.fromRGB(40,18,18)
+	end
+end)
+
+-- Danger button
+dangerBtn.MouseEnter:Connect(function() TweenService:Create(dangerBtn,TweenInfo.new(0.15),{BackgroundColor3=Color3.fromRGB(60,20,0)}):Play(); TweenService:Create(dangerS,TweenInfo.new(0.15),{Transparency=0}):Play() end)
+dangerBtn.MouseLeave:Connect(function()
+	TweenService:Create(dangerBtn,TweenInfo.new(0.15),{BackgroundColor3=dangerEnabled and Color3.fromRGB(60,20,0) or Color3.fromRGB(40,14,0)}):Play()
+	TweenService:Create(dangerS,TweenInfo.new(0.15),{Transparency=0.4}):Play()
+end)
+dangerBtn.MouseButton1Click:Connect(function()
+	dangerEnabled = not dangerEnabled
+	if dangerEnabled then
+		dangerBtn.Text="⚠ Kill Aura: ON"; dangerBtn.TextColor3=Color3.fromRGB(255,140,0); dangerBtn.BackgroundColor3=Color3.fromRGB(60,20,0)
+		task.spawn(runDangerAura)
+	else
+		dangerBtn.Text="⚠ Kill Aura: OFF"; dangerBtn.TextColor3=Color3.fromRGB(160,160,160); dangerBtn.BackgroundColor3=Color3.fromRGB(40,14,0)
 	end
 end)
 
