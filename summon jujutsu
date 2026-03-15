@@ -1,0 +1,123 @@
+-- Auto Banner Summon UI
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- Settings
+local SUMMON_ARGS = {"Jujutsu", 10}
+local DELAY = 0.5 -- seconds between summons
+local running = false
+
+-- UI Setup
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "AutoSummonUI"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = playerGui
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 220, 0, 130)
+frame.Position = UDim2.new(0.5, -110, 0.1, 0)
+frame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+frame.BorderSizePixel = 0
+frame.Active = true
+frame.Draggable = true
+frame.Parent = screenGui
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 10)
+corner.Parent = frame
+
+-- Title
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 35)
+title.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+title.TextColor3 = Color3.fromRGB(255, 220, 80)
+title.Text = "⚡ Auto Summon"
+title.Font = Enum.Font.GothamBold
+title.TextSize = 16
+title.Parent = frame
+
+local titleCorner = Instance.new("UICorner")
+titleCorner.CornerRadius = UDim.new(0, 10)
+titleCorner.Parent = title
+
+-- Count label
+local countLabel = Instance.new("TextLabel")
+countLabel.Size = UDim2.new(1, 0, 0, 25)
+countLabel.Position = UDim2.new(0, 0, 0, 40)
+countLabel.BackgroundTransparency = 1
+countLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+countLabel.Text = "Summons: 0"
+countLabel.Font = Enum.Font.Gotham
+countLabel.TextSize = 13
+countLabel.Parent = frame
+
+-- Status label
+local statusLabel = Instance.new("TextLabel")
+statusLabel.Size = UDim2.new(1, 0, 0, 20)
+statusLabel.Position = UDim2.new(0, 0, 0, 62)
+statusLabel.BackgroundTransparency = 1
+statusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
+statusLabel.Text = "Status: Stopped"
+statusLabel.Font = Enum.Font.Gotham
+statusLabel.TextSize = 12
+statusLabel.Parent = frame
+
+-- Start/Stop Button
+local button = Instance.new("TextButton")
+button.Size = UDim2.new(0, 160, 0, 35)
+button.Position = UDim2.new(0.5, -80, 0, 88)
+button.BackgroundColor3 = Color3.fromRGB(50, 200, 100)
+button.TextColor3 = Color3.fromRGB(255, 255, 255)
+button.Text = "▶ Start"
+button.Font = Enum.Font.GothamBold
+button.TextSize = 14
+button.BorderSizePixel = 0
+button.Parent = frame
+
+local btnCorner = Instance.new("UICorner")
+btnCorner.CornerRadius = UDim.new(0, 8)
+btnCorner.Parent = button
+
+-- Logic
+local summonCount = 0
+local remote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RequestBannerSummon")
+
+local function updateUI()
+    if running then
+        button.Text = "⏹ Stop"
+        button.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
+        statusLabel.TextColor3 = Color3.fromRGB(80, 220, 80)
+        statusLabel.Text = "Status: Running..."
+    else
+        button.Text = "▶ Start"
+        button.BackgroundColor3 = Color3.fromRGB(50, 200, 100)
+        statusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
+        statusLabel.Text = "Status: Stopped"
+    end
+end
+
+local function autoSummon()
+    while running do
+        local ok, err = pcall(function()
+            remote:InvokeServer(unpack(SUMMON_ARGS))
+        end)
+        if ok then
+            summonCount += 1
+            countLabel.Text = "Summons: " .. summonCount
+        else
+            warn("Summon error: " .. tostring(err))
+        end
+        task.wait(DELAY)
+    end
+end
+
+button.MouseButton1Click:Connect(function()
+    running = not running
+    updateUI()
+    if running then
+        task.spawn(autoSummon)
+    end
+end)
