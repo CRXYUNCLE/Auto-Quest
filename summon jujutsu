@@ -1,6 +1,8 @@
--- Auto Banner Summon UI
+-- Auto Banner Summon UI (Delta Compatible)
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -10,64 +12,89 @@ local BANNER_NAME = "Jujutsu"
 local DELAY = 0.5
 local running = false
 local summonCount = 0
-local selectedAmount = 10 -- default
+local selectedAmount = 10
 
 local remote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RequestBannerSummon")
 
--- UI Setup
+-- ScreenGui
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "AutoSummonUI"
 screenGui.ResetOnSpawn = false
+screenGui.IgnoreGuiInset = true
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 screenGui.Parent = playerGui
 
+-- Main Frame
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 260, 0, 220)
+frame.Size = UDim2.new(0, 260, 0, 225)
 frame.Position = UDim2.new(0.5, -130, 0.1, 0)
 frame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
 frame.BorderSizePixel = 0
-frame.Active = true
-frame.Draggable = true
 frame.Parent = screenGui
 
-local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 12)
-corner.Parent = frame
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 12)
 
--- Stroke
-local stroke = Instance.new("UIStroke")
+local stroke = Instance.new("UIStroke", frame)
 stroke.Color = Color3.fromRGB(255, 200, 50)
 stroke.Thickness = 1.5
 stroke.Transparency = 0.5
-stroke.Parent = frame
 
 -- Title Bar
-local titleBar = Instance.new("Frame")
+local titleBar = Instance.new("Frame", frame)
 titleBar.Size = UDim2.new(1, 0, 0, 38)
+titleBar.Position = UDim2.new(0, 0, 0, 0)
 titleBar.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
 titleBar.BorderSizePixel = 0
-titleBar.Parent = frame
+Instance.new("UICorner", titleBar).CornerRadius = UDim.new(0, 12)
 
-local titleCorner = Instance.new("UICorner")
-titleCorner.CornerRadius = UDim.new(0, 12)
-titleCorner.Parent = titleBar
-
-local title = Instance.new("TextLabel")
+local title = Instance.new("TextLabel", titleBar)
 title.Size = UDim2.new(1, 0, 1, 0)
 title.BackgroundTransparency = 1
 title.TextColor3 = Color3.fromRGB(255, 210, 60)
 title.Text = "⚡ Auto Summon"
 title.Font = Enum.Font.GothamBold
 title.TextSize = 16
-title.Parent = titleBar
+
+-- Drag Logic (Delta compatible, no .Draggable)
+local dragging = false
+local dragStart, startPos
+
+titleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = frame.Position
+    end
+end)
+
+titleBar.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
+        or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        frame.Position = UDim2.new(
+            startPos.X.Scale,
+            startPos.X.Offset + delta.X,
+            startPos.Y.Scale,
+            startPos.Y.Offset + delta.Y
+        )
+    end
+end)
 
 -- Stats Row
-local statsFrame = Instance.new("Frame")
+local statsFrame = Instance.new("Frame", frame)
 statsFrame.Size = UDim2.new(1, -20, 0, 30)
 statsFrame.Position = UDim2.new(0, 10, 0, 46)
 statsFrame.BackgroundTransparency = 1
-statsFrame.Parent = frame
 
-local countLabel = Instance.new("TextLabel")
+local countLabel = Instance.new("TextLabel", statsFrame)
 countLabel.Size = UDim2.new(0.5, 0, 1, 0)
 countLabel.BackgroundTransparency = 1
 countLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
@@ -75,9 +102,8 @@ countLabel.Text = "Summons: 0"
 countLabel.Font = Enum.Font.GothamBold
 countLabel.TextSize = 13
 countLabel.TextXAlignment = Enum.TextXAlignment.Left
-countLabel.Parent = statsFrame
 
-local statusLabel = Instance.new("TextLabel")
+local statusLabel = Instance.new("TextLabel", statsFrame)
 statusLabel.Size = UDim2.new(0.5, 0, 1, 0)
 statusLabel.Position = UDim2.new(0.5, 0, 0, 0)
 statusLabel.BackgroundTransparency = 1
@@ -86,10 +112,9 @@ statusLabel.Text = "● Stopped"
 statusLabel.Font = Enum.Font.GothamBold
 statusLabel.TextSize = 13
 statusLabel.TextXAlignment = Enum.TextXAlignment.Right
-statusLabel.Parent = statsFrame
 
 -- Amount Label
-local amountLabel = Instance.new("TextLabel")
+local amountLabel = Instance.new("TextLabel", frame)
 amountLabel.Size = UDim2.new(1, -20, 0, 20)
 amountLabel.Position = UDim2.new(0, 10, 0, 82)
 amountLabel.BackgroundTransparency = 1
@@ -98,20 +123,17 @@ amountLabel.Text = "Summon Amount:"
 amountLabel.Font = Enum.Font.Gotham
 amountLabel.TextSize = 12
 amountLabel.TextXAlignment = Enum.TextXAlignment.Left
-amountLabel.Parent = frame
 
 -- Amount Grid
-local gridFrame = Instance.new("Frame")
+local gridFrame = Instance.new("Frame", frame)
 gridFrame.Size = UDim2.new(1, -20, 0, 70)
 gridFrame.Position = UDim2.new(0, 10, 0, 104)
 gridFrame.BackgroundTransparency = 1
-gridFrame.Parent = frame
 
-local gridLayout = Instance.new("UIGridLayout")
+local gridLayout = Instance.new("UIGridLayout", gridFrame)
 gridLayout.CellSize = UDim2.new(0, 52, 0, 28)
 gridLayout.CellPadding = UDim2.new(0, 6, 0, 6)
 gridLayout.SortOrder = Enum.SortOrder.LayoutOrder
-gridLayout.Parent = gridFrame
 
 local amounts = {10, 20, 30, 40, 50, 60, 70, 80, 90, 100}
 local amountButtons = {}
@@ -127,7 +149,7 @@ local function selectAmount(amount, btn)
 end
 
 for i, amount in ipairs(amounts) do
-    local btn = Instance.new("TextButton")
+    local btn = Instance.new("TextButton", gridFrame)
     btn.Size = UDim2.new(0, 52, 0, 28)
     btn.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
     btn.TextColor3 = Color3.fromRGB(180, 180, 180)
@@ -136,11 +158,7 @@ for i, amount in ipairs(amounts) do
     btn.TextSize = 12
     btn.BorderSizePixel = 0
     btn.LayoutOrder = i
-    btn.Parent = gridFrame
-
-    local btnCorner = Instance.new("UICorner")
-    btnCorner.CornerRadius = UDim.new(0, 6)
-    btnCorner.Parent = btn
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
 
     table.insert(amountButtons, {btn = btn, amount = amount})
 
@@ -151,24 +169,19 @@ for i, amount in ipairs(amounts) do
     end)
 end
 
--- Select default (x10)
 selectAmount(10, amountButtons[1].btn)
 
 -- Start/Stop Button
-local startBtn = Instance.new("TextButton")
+local startBtn = Instance.new("TextButton", frame)
 startBtn.Size = UDim2.new(1, -20, 0, 38)
-startBtn.Position = UDim2.new(0, 10, 0, 172)
+startBtn.Position = UDim2.new(0, 10, 0, 178)
 startBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 100)
 startBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 startBtn.Text = "▶  Start Auto Summon"
 startBtn.Font = Enum.Font.GothamBold
 startBtn.TextSize = 15
 startBtn.BorderSizePixel = 0
-startBtn.Parent = frame
-
-local startBtnCorner = Instance.new("UICorner")
-startBtnCorner.CornerRadius = UDim.new(0, 9)
-startBtnCorner.Parent = startBtn
+Instance.new("UICorner", startBtn).CornerRadius = UDim.new(0, 9)
 
 -- Logic
 local function updateUI()
