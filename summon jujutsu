@@ -6,9 +6,13 @@ local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
 -- Settings
-local SUMMON_ARGS = {"Jujutsu", 50}
-local DELAY = 0.5 -- seconds between summons
+local BANNER_NAME = "Jujutsu"
+local DELAY = 0.5
 local running = false
+local summonCount = 0
+local selectedAmount = 10 -- default
+
+local remote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RequestBannerSummon")
 
 -- UI Setup
 local screenGui = Instance.new("ScreenGui")
@@ -17,95 +21,177 @@ screenGui.ResetOnSpawn = false
 screenGui.Parent = playerGui
 
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 220, 0, 130)
-frame.Position = UDim2.new(0.5, -110, 0.1, 0)
-frame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+frame.Size = UDim2.new(0, 260, 0, 220)
+frame.Position = UDim2.new(0.5, -130, 0.1, 0)
+frame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
 frame.BorderSizePixel = 0
 frame.Active = true
 frame.Draggable = true
 frame.Parent = screenGui
 
 local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 10)
+corner.CornerRadius = UDim.new(0, 12)
 corner.Parent = frame
 
--- Title
+-- Stroke
+local stroke = Instance.new("UIStroke")
+stroke.Color = Color3.fromRGB(255, 200, 50)
+stroke.Thickness = 1.5
+stroke.Transparency = 0.5
+stroke.Parent = frame
+
+-- Title Bar
+local titleBar = Instance.new("Frame")
+titleBar.Size = UDim2.new(1, 0, 0, 38)
+titleBar.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
+titleBar.BorderSizePixel = 0
+titleBar.Parent = frame
+
+local titleCorner = Instance.new("UICorner")
+titleCorner.CornerRadius = UDim.new(0, 12)
+titleCorner.Parent = titleBar
+
 local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, 0, 0, 35)
-title.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-title.TextColor3 = Color3.fromRGB(255, 220, 80)
+title.Size = UDim2.new(1, 0, 1, 0)
+title.BackgroundTransparency = 1
+title.TextColor3 = Color3.fromRGB(255, 210, 60)
 title.Text = "⚡ Auto Summon"
 title.Font = Enum.Font.GothamBold
 title.TextSize = 16
-title.Parent = frame
+title.Parent = titleBar
 
-local titleCorner = Instance.new("UICorner")
-titleCorner.CornerRadius = UDim.new(0, 10)
-titleCorner.Parent = title
+-- Stats Row
+local statsFrame = Instance.new("Frame")
+statsFrame.Size = UDim2.new(1, -20, 0, 30)
+statsFrame.Position = UDim2.new(0, 10, 0, 46)
+statsFrame.BackgroundTransparency = 1
+statsFrame.Parent = frame
 
--- Count label
 local countLabel = Instance.new("TextLabel")
-countLabel.Size = UDim2.new(1, 0, 0, 25)
-countLabel.Position = UDim2.new(0, 0, 0, 40)
+countLabel.Size = UDim2.new(0.5, 0, 1, 0)
 countLabel.BackgroundTransparency = 1
 countLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
 countLabel.Text = "Summons: 0"
-countLabel.Font = Enum.Font.Gotham
+countLabel.Font = Enum.Font.GothamBold
 countLabel.TextSize = 13
-countLabel.Parent = frame
+countLabel.TextXAlignment = Enum.TextXAlignment.Left
+countLabel.Parent = statsFrame
 
--- Status label
 local statusLabel = Instance.new("TextLabel")
-statusLabel.Size = UDim2.new(1, 0, 0, 20)
-statusLabel.Position = UDim2.new(0, 0, 0, 62)
+statusLabel.Size = UDim2.new(0.5, 0, 1, 0)
+statusLabel.Position = UDim2.new(0.5, 0, 0, 0)
 statusLabel.BackgroundTransparency = 1
 statusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
-statusLabel.Text = "Status: Stopped"
-statusLabel.Font = Enum.Font.Gotham
-statusLabel.TextSize = 12
-statusLabel.Parent = frame
+statusLabel.Text = "● Stopped"
+statusLabel.Font = Enum.Font.GothamBold
+statusLabel.TextSize = 13
+statusLabel.TextXAlignment = Enum.TextXAlignment.Right
+statusLabel.Parent = statsFrame
+
+-- Amount Label
+local amountLabel = Instance.new("TextLabel")
+amountLabel.Size = UDim2.new(1, -20, 0, 20)
+amountLabel.Position = UDim2.new(0, 10, 0, 82)
+amountLabel.BackgroundTransparency = 1
+amountLabel.TextColor3 = Color3.fromRGB(160, 160, 180)
+amountLabel.Text = "Summon Amount:"
+amountLabel.Font = Enum.Font.Gotham
+amountLabel.TextSize = 12
+amountLabel.TextXAlignment = Enum.TextXAlignment.Left
+amountLabel.Parent = frame
+
+-- Amount Grid
+local gridFrame = Instance.new("Frame")
+gridFrame.Size = UDim2.new(1, -20, 0, 70)
+gridFrame.Position = UDim2.new(0, 10, 0, 104)
+gridFrame.BackgroundTransparency = 1
+gridFrame.Parent = frame
+
+local gridLayout = Instance.new("UIGridLayout")
+gridLayout.CellSize = UDim2.new(0, 52, 0, 28)
+gridLayout.CellPadding = UDim2.new(0, 6, 0, 6)
+gridLayout.SortOrder = Enum.SortOrder.LayoutOrder
+gridLayout.Parent = gridFrame
+
+local amounts = {10, 20, 30, 40, 50, 60, 70, 80, 90, 100}
+local amountButtons = {}
+
+local function selectAmount(amount, btn)
+    selectedAmount = amount
+    for _, data in ipairs(amountButtons) do
+        data.btn.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+        data.btn.TextColor3 = Color3.fromRGB(180, 180, 180)
+    end
+    btn.BackgroundColor3 = Color3.fromRGB(255, 200, 50)
+    btn.TextColor3 = Color3.fromRGB(20, 20, 20)
+end
+
+for i, amount in ipairs(amounts) do
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, 52, 0, 28)
+    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+    btn.TextColor3 = Color3.fromRGB(180, 180, 180)
+    btn.Text = "x" .. amount
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 12
+    btn.BorderSizePixel = 0
+    btn.LayoutOrder = i
+    btn.Parent = gridFrame
+
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 6)
+    btnCorner.Parent = btn
+
+    table.insert(amountButtons, {btn = btn, amount = amount})
+
+    btn.MouseButton1Click:Connect(function()
+        if not running then
+            selectAmount(amount, btn)
+        end
+    end)
+end
+
+-- Select default (x10)
+selectAmount(10, amountButtons[1].btn)
 
 -- Start/Stop Button
-local button = Instance.new("TextButton")
-button.Size = UDim2.new(0, 160, 0, 35)
-button.Position = UDim2.new(0.5, -80, 0, 88)
-button.BackgroundColor3 = Color3.fromRGB(50, 200, 100)
-button.TextColor3 = Color3.fromRGB(255, 255, 255)
-button.Text = "▶ Start"
-button.Font = Enum.Font.GothamBold
-button.TextSize = 14
-button.BorderSizePixel = 0
-button.Parent = frame
+local startBtn = Instance.new("TextButton")
+startBtn.Size = UDim2.new(1, -20, 0, 38)
+startBtn.Position = UDim2.new(0, 10, 0, 172)
+startBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 100)
+startBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+startBtn.Text = "▶  Start Auto Summon"
+startBtn.Font = Enum.Font.GothamBold
+startBtn.TextSize = 15
+startBtn.BorderSizePixel = 0
+startBtn.Parent = frame
 
-local btnCorner = Instance.new("UICorner")
-btnCorner.CornerRadius = UDim.new(0, 8)
-btnCorner.Parent = button
+local startBtnCorner = Instance.new("UICorner")
+startBtnCorner.CornerRadius = UDim.new(0, 9)
+startBtnCorner.Parent = startBtn
 
 -- Logic
-local summonCount = 0
-local remote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RequestBannerSummon")
-
 local function updateUI()
     if running then
-        button.Text = "⏹ Stop"
-        button.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
+        startBtn.Text = "⏹  Stop"
+        startBtn.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
         statusLabel.TextColor3 = Color3.fromRGB(80, 220, 80)
-        statusLabel.Text = "Status: Running..."
+        statusLabel.Text = "● Running"
     else
-        button.Text = "▶ Start"
-        button.BackgroundColor3 = Color3.fromRGB(50, 200, 100)
+        startBtn.Text = "▶  Start Auto Summon"
+        startBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 100)
         statusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
-        statusLabel.Text = "Status: Stopped"
+        statusLabel.Text = "● Stopped"
     end
 end
 
 local function autoSummon()
     while running do
         local ok, err = pcall(function()
-            remote:InvokeServer(unpack(SUMMON_ARGS))
+            remote:InvokeServer(BANNER_NAME, selectedAmount)
         end)
         if ok then
-            summonCount += 1
+            summonCount += selectedAmount
             countLabel.Text = "Summons: " .. summonCount
         else
             warn("Summon error: " .. tostring(err))
@@ -114,7 +200,7 @@ local function autoSummon()
     end
 end
 
-button.MouseButton1Click:Connect(function()
+startBtn.MouseButton1Click:Connect(function()
     running = not running
     updateUI()
     if running then
