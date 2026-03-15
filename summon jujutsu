@@ -6,7 +6,7 @@ local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
 -- Settings
-local SUMMON_ARGS = {"Jujutsu", 10}
+local SUMMON_ARGS = {"Jujutsu", 50}
 local DELAY = 0.5 -- seconds between summons
 local running = false
 
